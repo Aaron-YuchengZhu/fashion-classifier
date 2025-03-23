@@ -13,7 +13,7 @@ The dataset and trained model files are too large for GitHub. Download them from
 - [LAT.zip](https://1drv.ms/u/c/b82bee97bf2cbc97/EXAnIefyHDdKkICyWkXQWCwBC04x8-RmxcRE_g1yXcpuPA?e=6n23kW) - LAT dataset
 - [AAT.zip](https://1drv.ms/u/c/b82bee97bf2cbc97/EYfLrQV2hM9Em73MpfoOk7kBCJxP_4cHEsul0Vcpteax7A?e=zUAjFb) - AAT dataset
 - [fashion_classifier.pth](https://1drv.ms/u/c/b82bee97bf2cbc97/EU84bStu4oBPlaNC2a6-HfcBYhJb7jhXu8CAyg-FxQXezw?e=78KB30) - Initial trained model weights
-- [`best_fashion_classifier_v1.pth`](https://1drv.ms/u/c/b82bee97bf2cbc97/Ea5GA-GzQd5FnlI_7iSRKkgBpGCUwQC6IwwmjltM0WRmRw) - Trained model weights (v1, latest, corresponds to tag v1.0)
+- [best_fashion_classifier_v1.pth](https://1drv.ms/u/c/b82bee97bf2cbc97/Ea5GA-GzQd5FnlI_7iSRKkgBpGCUwQC6IwwmjltM0WRmRw) - Trained model weights (v1, latest, corresponds to tag v1.0)
 
 ## Requirements
 - Python 3.10
