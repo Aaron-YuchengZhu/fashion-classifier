@@ -1,3 +1,6 @@
 LAT/
 AAT/
 fashion_classifier.pth
+*.pth
+LAT/
+AAT/
