@@ -1,18 +1,37 @@
 # Fashion Classifier
 
-This is a group project for COMP9444. We trained a fashion classification model using MobileNetV2 to classify items into four categories: `shoes`, `clothing`, `accessories`, and `bags`. The dataset has been cleaned and organized, and the latest model (`best_mobilenet_v3.pth`) achieves high accuracy on the test set.
+This is a group project for COMP9444. We trained a fashion classification model using MobileNetV2 to classify items into four categories: `shoes`, `clothing`, `accessories`, and `bags`. The dataset has been cleaned and organized, and the latest model (`best_mobilenet_v3.pth`) achieves high accuracy on the test set. This repository reflects the v2.0 state (April 2025).
 
 ## Directory Structure
-- `data/`: Datasets
-  - `LAT/`: Images (`image/`) and labels (`label/LAT.json`)
-  - `AAT/`: Images (`image/`) and labels (`label/AAT.json`)
-  - `train.json`, `val.json`, `test.json`: Processed datasets (7783 images, 7:2:1 split, no `unknown`)
-- `models/`: Trained model weights (e.g., `best_mobilenet_v3.pth`)
-- `scripts/`: Core scripts
-  - `process_data.py`: Generates `train/val/test.json` from `LAT/AAT.json`
-  - `train_mobilenet.py`: Trains MobileNetV2 model
-  - `test_mobilenet.py`: Tests the model
-- `docs/`: Documentation (e.g., `README.md`, report)
+
+```bash
+Datasets/
+├── data/
+│   ├── LAT/
+│   │   ├── image/
+│   │   └── label/
+│   ├── AAT/
+│   │   ├── image/
+│   │   └── label/
+│   ├── train.json
+│   ├── val.json
+│   └── test.json
+├── models/
+│   └── best_mobilenet_v3.pth
+├── scripts/
+│   ├── process_data.py
+│   ├── train_mobilenet.py
+│   └── test_mobilenet.py
+├── docs/
+│   └── README.md
+└── .gitignore
+```
+
+
+- `data/`: Datasets (images and processed JSON files)
+- `models/`: Trained model weights
+- `scripts/`: Core scripts for processing, training, and testing
+- `docs/`: Documentation
 
 ## Dataset
 - **Total**: 7783 images (after removing 631 `unknown` labels)
@@ -26,10 +45,12 @@ Download datasets (too large for GitHub):
 - [AAT.zip](https://1drv.ms/u/c/b82bee97bf2cbc97/EYfLrQV2hM9Em73MpfoOk7kBCJxP_4cHEsul0Vcpteax7A?e=zUAjFb)
 
 ## Models
-- `best_mobilenet_v3.pth`: Latest MobileNetV2 model (April 2025)
-- Older models: `best_mobilenet_v1.pth`, `best_mobilenet_v2.pth`, `best_fashion_classifier_v1.pth` (ResNet18)
+- `best_mobilenet_v3.pth`: Latest MobileNetV2 model (April 2025, v2.0)
+- Older models available on cloud: `best_mobilenet_v1.pth`, `best_mobilenet_v2.pth`, `best_fashion_classifier_v1.pth` (ResNet18)
 
-Download: [OneDrive](https://1drv.ms/u/c/b82bee97bf2cbc97/EU84bStu4oBPlaNC2a6-HfcBYhJb7jhXu8CAyg-FxQXezw?e=78KB30) (check latest).
+Download models:
+- [v2 Models Folder](https://1drv.ms/f/c/b82bee97bf2cbc97/Etsxa7VIRvJFl2Y6D77RMfIBhxIxXXAJIkTcYa4hTAM68Q?e=fDKfx2) (contains `best_mobilenet_v1.pth`, `v2.pth`, `v3.pth`)
+- [v1 Models](https://1drv.ms/f/c/b82bee97bf2cbc97/EeR7b_PygH5IlvW8uNiT5RUBr-WmOQ8VGMoUGeXERmHiIQ) (older ResNet18 models)
 
 ## Requirements
 - Python 3.10
@@ -41,45 +62,40 @@ Download: [OneDrive](https://1drv.ms/u/c/b82bee97bf2cbc97/EU84bStu4oBPlaNC2a6-Hf
 Install:
 ```bash
 pip install torch==2.5.0 torchvision pillow scikit-learn
+```
 
 ## Usage
-1. Download the dataset and model files from the links above.
 
-2. Extract `LAT.zip` and `AAT.zip` into the Datasets/ directory.
-
-3. Run `process_lat_data.py` to generate the dataset:
-```bash
-python process_lat_data.py
-```
-
-4. Run `train_model.py` to train a new model (or use the pre-trained models):
-```bash
-python train_model.py
-```
-This will save the model with a version number (e.g., `best_fashion_classifier_v2.pth` if v1 exists).
-
-5. Run `test_model.py` to test the model on new images:
-```bash
-# Test on 10 random images from LAT using v1 model
-python test_model.py --model best_fashion_classifier_v1.pth --source LAT --num_images 10
-
-# Test on 5 random images from AAT using v1 model
-python test_model.py --model best_fashion_classifier_v1.pth --source AAT --num_images 5
-
-# Test on 15 random images from both LAT and AAT using initial model
-python test_model.py --model fashion_classifier.pth --source both --num_images 15
-```
+1. Download and Extract: Get LAT.zip, AAT.zip, and best_mobilenet_v3.pth from the links above, extract datasets to data/.
+2. Process Data: Generate train/val/test.json:
+   ```bash
+   python scripts/process_data.py
+   ```
+3. Train Model: Train MobileNetV2 (saves to models/best_mobilenet_v3.pth):
+   ```bash
+   python scripts/train_mobilenet.py
+   ```
+4. Test Model: Test on test.json:
+   ```bash
+   # Test 50 random images from both LAT and AAT
+   python scripts/test_mobilenet.py --model models/best_mobilenet_v3.pth --source both --num_images 50
+   ```
 
 ## Results
-Model `best_fashion_classifier_v1.pth` (tag v1.0):
-Tested on LAT: 100% accuracy (83/83 images).
-Note: AAT testing may skip some images due to invalid gt indices in AAT.json.
+
+- **v2 (MobileNetV2):** Test Accuracy 91.84% (45/49, 50 sampled, 1 skipped), Val Loss 0.2937.
+- Older results:
+  - best_mobilenet_v2.pth: ~90% (45/50), Val Loss 0.3303.
+  - best_fashion_classifier_v1.pth (ResNet18): 100% on LAT (83/83), Val Loss 0.2709.
 
 ## Changelog
-2025-03-23 (v1.0):
-Updated `train_model.py` to support versioned model saving (e.g., `best_fashion_classifier_v1.pth`).
-Updated `test_model.py` to support random testing from LAT and AAT datasets with command-line arguments (--model, --source, --num_images).
-Added `best_fashion_classifier_v1.pth` with 100% accuracy on LAT (83/83 images).
-Ignored `.idea/`, `.pth`, `LAT/`, and `AAT/` in `.gitignore`.
-Previous Versions:
-Initial version included `fashion_classifier.pth`, `process_lat_data.py`, and `fashion_dataset.json`.
+
+- 2025-04-05 (v2.0):
+  - Reset repository to v2: Cleaned dataset (7783 images, no unknown), MobileNetV2, new structure (data/, models/, scripts/, docs/).
+  - Added best_mobilenet_v3.pth (91.84% accuracy).
+  - Updated scripts and README.
+- 2025-03-23 (v1.0):
+  - Initial ResNet18 model (best_fashion_classifier_v1.pth), 100% on LAT.
+
+---
+
