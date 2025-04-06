@@ -9,8 +9,8 @@ import random
 import time
 
 # Command line arguments
-parser = argparse.ArgumentParser(description='Test MobileNetV2 on fashion images.')
-parser.add_argument('--model', type=str, default='best_mobilenet_v3.pth',
+parser = argparse.ArgumentParser(description='Test ResNet on fashion images.')
+parser.add_argument('--model', type=str, default='best_resnet18.pth',
                     help='Path to the model weights file')
 parser.add_argument('--source', type=str, choices=['LAT', 'AAT', 'both'], default='both',
                     help='Source dataset to test on')
@@ -21,18 +21,21 @@ args = parser.parse_args()
 # Load model
 device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu')
 print(f"Using device: {device}")
-model = models.mobilenet_v2(weights=None)
-num_ftrs = model.classifier[1].in_features
-model.classifier[1] = torch.nn.Linear(num_ftrs, 4)
+model = models.resnet18(weights=None)
+num_ftrs = model.fc.in_features
+model.fc = torch.nn.Linear(num_ftrs, 4)
+
+# load the model weights
 current_dir = os.path.dirname(os.path.abspath(__file__))
 base_dir = os.path.dirname(current_dir)  # Datasets/
 model_path = os.path.join(base_dir, 'models', args.model)
 if not os.path.exists(model_path):
     print(f"Error: Model file {model_path} not found.")
     sys.exit(1)
-model.load_state_dict(torch.load(model_path, weights_only=True))
+model.load_state_dict(torch.load(model_path, map_location=device))
 model = model.to(device)
 model.eval()
+
 
 # Category mapping
 label_map = {0: 'shoes', 1: 'clothing', 2: 'accessories', 3: 'bags'}

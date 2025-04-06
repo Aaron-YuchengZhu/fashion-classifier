@@ -65,10 +65,10 @@ print(f"Train samples: {len(train_dataset)}, Val samples: {len(val_dataset)}")
 train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
 
-# Load MobileNetV2
-model = models.mobilenet_v2(weights=models.MobileNet_V2_Weights.DEFAULT)
-num_ftrs = model.classifier[1].in_features
-model.classifier[1] = nn.Linear(num_ftrs, 4)
+# Load resnet18 model
+model = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
+num_ftrs = model.fc.in_features
+model.fc = nn.Linear(num_ftrs, 4) 
 device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu')
 print(f"Using device: {device}")
 model = model.to(device)
@@ -79,7 +79,7 @@ optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-3)
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5)
 
 # Save path
-model_path = os.path.join(base_dir, 'models', 'best_mobilenet_v3.pth')
+model_path = os.path.join(base_dir, 'models', 'best_resnet18.pth')
 model_dir = os.path.dirname(model_path)
 if not os.path.exists(model_dir):
     os.makedirs(model_dir)
