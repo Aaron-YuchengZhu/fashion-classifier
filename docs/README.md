@@ -54,6 +54,7 @@ Download datasets (too large for GitHub):
 ## Models
 - `best_mobilenet_v3.pth`: MobileNetV2, 91.84% accuracy, Val Loss 0.2937 (v2.0).
 - `best_resnet18.pth`: ResNet18, 91.30% accuracy, Val Loss 0.3046.
+- `best_resnet50.pth`: ResNet50, 98.00% accuracy (biased towards bags), Val Loss 0.3151
 - `best_efficientnet.pth`: EfficientNet-B0, 88.00% accuracy, Val Loss 0.3243.
 - Older models available on cloud: `best_mobilenet_v1.pth`, `best_mobilenet_v2.pth`, `best_fashion_classifier_v1.pth` (ResNet18).
 
@@ -91,6 +92,12 @@ pip install torch==2.5.0 torchvision pillow scikit-learn
      ```bash
      python scripts/train_resnet18.py
      ```
+     
+   - Train ResNet50 (saves to `models/best_resnet50.pth`):
+     ```bash
+     python scripts/train_resnet50.py
+     ```
+
    - Train EfficientNet-B0 (saves to models/best_efficientnet.pth):
      ```bash 
      python scripts/train_efficientnet.py
@@ -106,10 +113,16 @@ pip install torch==2.5.0 torchvision pillow scikit-learn
     ```bash
     python scripts/test_resnet.py --model models/best_resnet18.pth --source both --num_images 50
     ```
+   
+    - Test ResNet50:
+     ```bash
+     python scripts/test_resnet50.py --model models/best_resnet50.pth --source both --sample 50
+     ```
+
     - Test EfficientNet-B0:
-    ```bash
-    python scripts/test_efficientnet.py --model models/best_efficientnet.pth --source both --num_images 50
-    ```
+     ```bash
+     python scripts/test_efficientnet.py --model models/best_efficientnet.pth --source both --num_images 50
+     ```
 
 ## Results
 
@@ -122,6 +135,8 @@ pip install torch==2.5.0 torchvision pillow scikit-learn
 
 ## Changelog
 
+- 2025-04-07:
+  - Added ResNet50 scripts, 98.00% accuracy (note: biased towards bags, to be optimized)
 - 2025-04-06:
   - Added ResNet18 scripts, 91.30% accuracy.
   - Added EfficientNet-B0 scripts, 88.00% accuracy, fixed test script paths and MPS support.
