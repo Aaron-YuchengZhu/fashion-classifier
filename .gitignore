@@ -13,3 +13,8 @@ data/
 experiments/
 models/
 .DS_Store
+ATT_augmented/
+data/
+experiments/
+models/
+.DS_Store
