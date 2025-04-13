@@ -21,16 +21,18 @@ Datasets
 │   ├── best_mobilenet_v3.pth
 │   ├── best_resnet18.pth
 │   └── best_resnet50.pth
+├── notebooks
+│   └── fashion_classifier.ipynb
 └── scripts
-├── process_data.py
-├── test_efficientnet.py
-├── test_mobilenet_stratified.py
-├── test_resnet18.py
-├── test_resnet50.py
-├── train_efficientnet.py
-├── train_mobilenet_5fold.py
-├── train_resnet18.py
-└── train_resnet50.py
+    ├── process_data.py
+    ├── test_efficientnet.py
+    ├── test_mobilenet_stratified.py
+    ├── test_resnet18.py
+    ├── test_resnet50.py
+    ├── train_efficientnet.py
+    ├── train_mobilenet_5fold.py
+    ├── train_resnet18.py
+    └── train_resnet50.py
 ```
 
 
@@ -132,6 +134,7 @@ pip install torch==2.5.0 torchvision pillow scikit-learn
 
 - 2025-04-13:
   - MobileNetV2 5-fold, 99.6% accuracy (train_mobilenet_5fold.py, test_mobilenet_stratified.py).
+  - Update notebooks floder, submit fashion_classifier.ipynb
 - 2025-04-07:
   - Added ResNet50 scripts, 98.00% accuracy (note: biased towards bags, to be optimized)
 - 2025-04-06:
