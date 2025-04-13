@@ -6,71 +6,65 @@ This is a group project for COMP9444. We trained fashion classification models t
 
 ```bash
 Datasets
-├── data
-│   ├── AAT
-│   │   ├── image
-│   │   └── label
-│   ├── LAT
-│   │   ├── image
-│   │   └── label
-│   ├── test.json
-│   ├── train.json
-│   └── val.json
-├── docs
-│   └── README.md
+├── ATT_augmented
+│   ├── Accessories
+│   ├── Bags
+│   ├── Clothings
+│   └── Shoes
 ├── models
+│   ├── mobilenet_v2_fold1.pth
+│   ├── mobilenet_v2_fold2.pth
+│   ├── mobilenet_v2_fold3.pth
+│   ├── mobilenet_v2_fold4.pth
+│   ├── mobilenet_v2_fold5.pth
 │   ├── best_efficientnet.pth
-│   ├── best_mobilenet_v1.pth
-│   ├── best_mobilenet_v2.pth
 │   ├── best_mobilenet_v3.pth
-│   └── best_resnet18.pth
+│   ├── best_resnet18.pth
+│   └── best_resnet50.pth
 └── scripts
-    ├── process_data.py
-    ├── test_efficientnet.py
-    ├── test_mobilenet.py
-    ├── test_resnet.py
-    ├── train_efficientnet.py
-    ├── train_mobilenet.py
-    └── train_resnet18.py
+├── process_data.py
+├── test_efficientnet.py
+├── test_mobilenet_stratified.py
+├── test_resnet18.py
+├── test_resnet50.py
+├── train_efficientnet.py
+├── train_mobilenet_5fold.py
+├── train_resnet18.py
+└── train_resnet50.py
 ```
 
 
-- `data/`: Datasets (images and processed JSON files)
-- `models/`: Trained model weights
-- `scripts/`: Core scripts for processing, training, and testing
-- `docs/`: Documentation
+
+- `ATT_augmented/`: Dataset (8000 images)
+- `models/`: Trained weights (v3 + older)
+- `scripts/`: Training/testing scripts
 
 ## Dataset
-- **Total**: 7783 images (after removing 631 `unknown` labels)
-- **Categories**: 
-  - `bags`: 7036 (90%+), `clothing`: 343, `shoes`: 316, `accessories`: 88
-- **Split**: `train: 5448`, `val: 1557`, `test: 778` (7:2:1)
-- **Note**: Data is imbalanced (`bags` dominant); consider weights in training.
+- **Total**: 8000 images
+- **Categories**: `bags`, `clothing`, `shoes`, `accessories` (2000 each)
+- **Note**: Balanced, no JSON required.
 
-Download datasets (too large for GitHub):
-- [LAT.zip](https://1drv.ms/u/c/b82bee97bf2cbc97/EXAnIefyHDdKkICyWkXQWCwBC04x8-RmxcRE_g1yXcpuPA?e=6n23kW)
-- [AAT.zip](https://1drv.ms/u/c/b82bee97bf2cbc97/EYfLrQV2hM9Em73MpfoOk7kBCJxP_4cHEsul0Vcpteax7A?e=zUAjFb)
+Download:
+- [ATT_augmented.zip](https://1drv.ms/u/c/b82bee97bf2cbc97/EVEzFa9TF5ZDtEpNJ7KGjnUBjLmcYQPG8WqTiZ_DRLwhPw?e=Ys7Rtz)
 
 ## Models
-- `best_mobilenet_v3.pth`: MobileNetV2, 91.84% accuracy, Val Loss 0.2937 (v2.0).
-- `best_resnet18.pth`: ResNet18, 91.30% accuracy, Val Loss 0.3046.
-- `best_resnet50.pth`: ResNet50, 98.00% accuracy (biased towards bags), Val Loss 0.3151
-- `best_efficientnet.pth`: EfficientNet-B0, 88.00% accuracy, Val Loss 0.3243.
-- Older models available on cloud: `best_mobilenet_v1.pth`, `best_mobilenet_v2.pth`, `best_fashion_classifier_v1.pth` (ResNet18).
+- **v3.0**:
+  - **MobileNetV2**: 99.6% accuracy (5-fold, `mobilenet_v2_fold1.pth` to `fold5.pth`), Avg Val Loss 0.0686.
+- **v2.0**:
+  - **ResNet50**: 98.0% accuracy, Val Loss 0.3151 (`best_resnet50.pth`).
+  - **EfficientNet-B0**: 88.0% accuracy, Val Loss 0.3243 (`best_efficientnet.pth`).
+  - **MobileNetV3**: 91.84% accuracy, Val Loss 0.2937 (`best_mobilenet_v3.pth`).
+- **v1.0**:
+  - **ResNet18**: 91.3% accuracy, Val Loss 0.3046 (`best_resnet18.pth`).
 
-Download models:
-- [v2 Models Folder](https://1drv.ms/f/c/b82bee97bf2cbc97/Etsxa7VIRvJFl2Y6D77RMfIBhxIxXXAJIkTcYa4hTAM68Q?e=fDKfx2) (contains `best_mobilenet_v1.pth`, `v2.pth`, `v3.pth`)
-- [v1 Models](https://1drv.ms/f/c/b82bee97bf2cbc97/EeR7b_PygH5IlvW8uNiT5RUBr-WmOQ8VGMoUGeXERmHiIQ) (older ResNet18 models)
+Download:
+- [Models](https://1drv.ms/u/c/b82bee97bf2cbc97/ETXp2gUGHzxGgVYAU1QczBYBIyBL_Nzcpjr--Ljv4xF3uA)
 
 ## Requirements
 - Python 3.10
 - PyTorch 2.5.0
-- torchvision
-- PIL
-- scikit-learn
-- efficientnet_pytorch (for EfficientNet)
+- torchvision, PIL, scikit-learn
 
-Install:
 ```bash
 pip install torch==2.5.0 torchvision pillow scikit-learn
 ```
@@ -126,6 +120,7 @@ pip install torch==2.5.0 torchvision pillow scikit-learn
 
 ## Results
 
+- **MobileNetV2**: 99.6% accuracy (100/100, 5 runs), Avg Val Loss 0.0686 
 - **MobileNetV2**: Test Accuracy 91.84% (45/49), Val Loss 0.2937.
 - **ResNet18**: Test Accuracy 91.30% (42/46), Val Loss 0.3046.
 - **EfficientNet-B0**: Test Accuracy 88.00% (44/50), Val Loss 0.3243.
@@ -135,6 +130,8 @@ pip install torch==2.5.0 torchvision pillow scikit-learn
 
 ## Changelog
 
+- 2025-04-13:
+  - MobileNetV2 5-fold, 99.6% accuracy (train_mobilenet_5fold.py, test_mobilenet_stratified.py).
 - 2025-04-07:
   - Added ResNet50 scripts, 98.00% accuracy (note: biased towards bags, to be optimized)
 - 2025-04-06:
