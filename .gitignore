@@ -2,3 +2,9 @@
 LAT/
 AAT/
 .idea/
+ATT_augmented/
+fashion_dataset/
+data/
+experiments/
+models/
+.DS_Store
