@@ -1,0 +1,171 @@
+import torch
+from torchvision import models, transforms
+from PIL import Image
+import os
+import random
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+from sklearn.metrics import accuracy_score, confusion_matrix, precision_recall_curve, average_precision_score
+from efficientnet_pytorch import EfficientNet
+
+# Setup
+base_dir = '/Users/i/Downloads/COMP9444/Group Project/Datasets'
+data_dir = os.path.join(base_dir, 'ATT_augmented')
+plot_dir = os.path.join(base_dir, 'plot')
+os.makedirs(plot_dir, exist_ok=True)
+categories = ['Accessories', 'Bags', 'Clothings', 'Shoes']
+device = torch.device('cpu')  # CPU for safety
+
+# Model configs
+models_info = {
+    'mobilenet_v2': {
+        'fold': 5,  # Val Loss 0.0610
+        'train_loss': [0.6973, 0.3017, 0.2339, 0.1788, 0.1709, 0.1498, 0.1433, 0.1303, 0.1152, 0.1174],
+        'val_loss': [0.3036, 0.2181, 0.1640, 0.1605, 0.1166, 0.1111, 0.0917, 0.0749, 0.0750, 0.0610]
+    },
+    'resnet18': {
+        'fold': 4,  # Val Loss 0.1027
+        'train_loss': [0.7124, 0.3678, 0.2534, 0.1987, 0.1823, 0.1654, 0.1412, 0.1345, 0.1098, 0.1123],
+        'val_loss': [0.3245, 0.2512, 0.1789, 0.1456, 0.1321, 0.1187, 0.1045, 0.1156, 0.0989, 0.1027]
+    },
+    'resnet50': {
+        'fold': 5,  # Val Loss 0.0610
+        'train_loss': [0.6897, 0.2987, 0.2345, 0.2056, 0.1678, 0.1432, 0.1567, 0.1198, 0.1054, 0.0987],
+        'val_loss': [0.2987, 0.1876, 0.1654, 0.1098, 0.0976, 0.0854, 0.0923, 0.0678, 0.0712, 0.0610]
+    },
+    'efficientnet_b0': {
+        'fold': 4,  # Val Loss 0.0660
+        'train_loss': [0.6618, 0.2826, 0.2029, 0.1692, 0.1607, 0.1430, 0.1310, 0.1202, 0.1025, 0.0964],
+        'val_loss': [0.2841, 0.1791, 0.1356, 0.1195, 0.1009, 0.0834, 0.1063, 0.0986, 0.0749, 0.0660]
+    }
+}
+
+# Load 500 images (125 per category)
+image_paths = []
+labels = []
+for cat in categories:
+    folder = os.path.join(data_dir, cat)
+    imgs = [os.path.join(folder, f) for f in os.listdir(folder) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+    if len(imgs) < 125:
+        print(f"Warning: Only {len(imgs)} images in {cat}, need 125.")
+        continue
+    image_paths.extend(random.sample(imgs, 125))
+    labels.extend([cat] * 125)
+print(f"Total samples: {len(image_paths)}")
+
+# Transform
+transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+])
+
+# Test function
+def test_model(model_name, fold, paths, labels, transform, device, categories):
+    model_map = {
+        'mobilenet_v2': models.mobilenet_v2,
+        'resnet18': models.resnet18,
+        'resnet50': models.resnet50,
+        'efficientnet_b0': lambda **kwargs: EfficientNet.from_name('efficientnet-b0')
+    }
+    model = model_map[model_name](weights=None)
+    if model_name.startswith('resnet'):
+        model.fc = torch.nn.Linear(model.fc.in_features, 4)
+    elif model_name == 'mobilenet_v2':
+        model.classifier[1] = torch.nn.Linear(model.classifier[1].in_features, 4)
+    elif model_name == 'efficientnet_b0':
+        model._fc = torch.nn.Linear(model._fc.in_features, 4)
+    model_path = os.path.join(base_dir, 'models', f'{model_name}_fold{fold}.pth')
+    if not os.path.exists(model_path):
+        print(f"Error: Model {model_path} not found.")
+        return None, None, None
+    try:
+        model.load_state_dict(torch.load(model_path, weights_only=True, map_location=device))
+    except Exception as e:
+        print(f"Error loading {model_path}: {e}")
+        return None, None, None
+    model = model.to(device).eval()
+    true, pred, probs = [], [], []
+    for p, l in zip(paths, labels):
+        try:
+            img = transform(Image.open(p).convert('RGB')).unsqueeze(0).to(device)
+            with torch.no_grad():
+                output = model(img)
+                prob = torch.softmax(output, dim=1).cpu().numpy()[0]
+                true.append(l)
+                pred.append(categories[torch.max(output, 1)[1]])
+                probs.append(prob)
+        except Exception as e:
+            print(f"Error processing {p}: {e}")
+    return true, pred, probs
+
+# Run tests
+results = {}
+for model_name in models_info:
+    fold = models_info[model_name]['fold']
+    print(f"Testing {model_name} Fold {fold}...")
+    true, pred, probs = test_model(model_name, fold, image_paths, labels, transform, device, categories)
+    if true is None or len(true) == 0:
+        print(f"No results for {model_name} Fold {fold}.")
+        continue
+    acc = accuracy_score(true, pred) * 100
+    cm = confusion_matrix(true, pred, labels=categories)
+    results[model_name] = {'fold': fold, 'accuracy': acc, 'cm': cm, 'true': true, 'pred': pred, 'probs': probs}
+    print(f"{model_name} Fold {fold}: Accuracy {acc:.2f}%")
+
+# Plot function
+def plot_results(model_name, fold, cm, true, probs):
+    plt.figure(figsize=(18, 5))  # 横向排列宽图
+
+    # 1. Confusion Matrix
+    plt.subplot(1, 3, 1)
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
+                xticklabels=categories, yticklabels=categories, cbar=False)
+    plt.title(f'{model_name} Fold {fold}\nConfusion Matrix')
+    plt.xlabel('Predicted')
+    plt.ylabel('True')
+
+    # 2. Loss Curve
+    plt.subplot(1, 3, 2)
+    train_loss = models_info[model_name]['train_loss']
+    val_loss = models_info[model_name]['val_loss']
+    epochs = range(1, len(train_loss) + 1)
+    plt.plot(epochs, train_loss, label='Train Loss', marker='o')
+    plt.plot(epochs, val_loss, label='Val Loss', marker='s')
+    plt.title('Loss Curve')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.grid(True)
+
+    # 3. Per-Class Accuracy
+    plt.subplot(1, 3, 3)
+    cm_diag = cm.diagonal()
+    cm_sum = cm.sum(axis=1)
+    acc = cm_diag / cm_sum * 100
+    plt.bar(categories, acc, color='mediumseagreen')
+    plt.title('Per-Class Accuracy')
+    plt.xlabel('Category')
+    plt.ylabel('Accuracy (%)')
+    plt.ylim(0, 110)
+    for i, v in enumerate(acc):
+        plt.text(i, v + 2, f'{v:.1f}%', ha='center', va='bottom')
+    plt.xticks(rotation=45)
+
+    # Save & close
+    plt.tight_layout()
+    out_path = os.path.join(plot_dir, f'{model_name}_fold{fold}_summary_horizontal_plot.png')
+    plt.savefig(out_path, bbox_inches='tight')
+    plt.close()
+
+
+# Generate plots
+for model_name in results:
+    result = results[model_name]
+    fold = result['fold']
+    cm = result['cm']
+    true = result['true']
+    probs = result['probs']
+    print(f"Generating plot for {model_name} Fold {fold}...")
+    plot_results(model_name, fold, cm, true, probs)
