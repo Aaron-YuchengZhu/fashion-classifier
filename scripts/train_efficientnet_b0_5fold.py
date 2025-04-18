@@ -86,7 +86,7 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(image_paths)):
     model = model.to(device)
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.0005)
+    optimizer = optim.Adam(model.parameters(), lr=0.0001)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=3)
 
     model_dir = os.path.join(base_dir, 'models')
