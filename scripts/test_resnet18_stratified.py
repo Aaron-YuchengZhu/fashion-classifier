@@ -6,15 +6,21 @@ import argparse
 from sklearn.model_selection import StratifiedShuffleSplit
 from collections import Counter
 import random
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+from sklearn.metrics import confusion_matrix
+import matplotlib.gridspec as gridspec
 
-# 命令行参数
+# Command line arguments
 parser = argparse.ArgumentParser(description='Test ResNet18 on ATT_augmented.')
 parser.add_argument('--model', type=str, default='resnet18_fold1.pth')
 parser.add_argument('--num_images', type=int, default=100)
 parser.add_argument('--runs', type=int, default=5, help='Number of test runs')
+parser.add_argument('--viz_samples', type=int, default=8, help='Number of sample images to visualize')
 args = parser.parse_args()
 
-# 加载模型
+# Load model
 device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu')
 print(f"Using device: {device}")
 model = models.resnet18(weights=None)
@@ -29,17 +35,24 @@ model.load_state_dict(torch.load(model_path, weights_only=True))
 model = model.to(device)
 model.eval()
 
-# 类别映射
+# Class mapping
 label_map = {0: 'Accessories', 1: 'Bags', 2: 'Clothings', 3: 'Shoes'}
+idx_to_class = {i: c for i, c in enumerate(sorted(['Accessories', 'Bags', 'Clothings', 'Shoes']))}
+class_to_idx = {c: i for i, c in idx_to_class.items()}
 
-# 图像预处理
+# Image preprocessing
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 
-# 加载所有图片
+# Display image preprocessing
+display_transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+])
+
+# Load all images
 data_dir = os.path.join(base_dir, 'data', 'ATT_augmented')
 categories = ['Accessories', 'Bags', 'Clothings', 'Shoes']
 image_paths = []
@@ -62,7 +75,7 @@ if len(image_paths) == 0:
     print("Error: No images found.")
     exit(1)
 
-# 多轮测试
+# Multiple test runs
 for run in range(args.runs):
     print(f"\nRun {run + 1}/{args.runs}")
     seed = random.randint(0, 1000)
@@ -71,33 +84,51 @@ for run in range(args.runs):
         test_paths = [image_paths[i] for i in test_idx]
         test_labels = [labels[i] for i in test_idx]
 
-    # 测试
+    # Testing
     correct = 0
     total = 0
     true_labels = []
     pred_labels = []
     errors = []
+    # Save some images and their prediction results for visualization
+    viz_images = []
+    viz_true = []
+    viz_pred = []
+    viz_paths = []
+    
     for img_path, true_label in zip(test_paths, test_labels):
         if not os.path.exists(img_path):
             print(f"Image {img_path} not found, skipping.")
             continue
         image = Image.open(img_path).convert('RGB')
-        image = transform(image).unsqueeze(0).to(device)
+        # Save the original image for display
+        orig_img = display_transform(image)
+        
+        # Transform for model
+        image_tensor = transform(image).unsqueeze(0).to(device)
 
         with torch.no_grad():
-            output = model(image)
+            output = model(image_tensor)
             _, predicted = torch.max(output, 1)
             predicted_label = label_map[predicted.item()]
 
         true_labels.append(true_label)
         pred_labels.append(predicted_label)
+        
+        # Collect samples for visualization
+        if len(viz_images) < args.viz_samples:
+            viz_images.append(orig_img)
+            viz_true.append(true_label)
+            viz_pred.append(predicted_label)
+            viz_paths.append(os.path.basename(img_path))
+        
         if predicted_label == true_label:
             correct += 1
         else:
             errors.append(f"Image: {os.path.basename(img_path)}, Predicted: {predicted_label}, True: {true_label}")
         total += 1
 
-    # 输出结果
+    # Output results
     accuracy = 100 * correct / total if total > 0 else 0
     print(f"Run {run + 1} Accuracy: {accuracy:.2f}% ({correct}/{total})")
     print(f"True label distribution: {Counter(true_labels)}")
@@ -105,4 +136,42 @@ for run in range(args.runs):
     if errors:
         print("Errors:")
         for error in errors:
-            print(error) 
+            print(error)
+    
+    # Generate confusion matrix
+    y_true = [class_to_idx[lbl] for lbl in true_labels]
+    y_pred = [class_to_idx[lbl] for lbl in pred_labels]
+    cm = confusion_matrix(y_true, y_pred)
+    
+    # Save confusion matrix image
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
+                xticklabels=categories, yticklabels=categories)
+    plt.xlabel('Predicted')
+    plt.ylabel('True')
+    plt.title(f'Confusion Matrix - Run {run+1}')
+    cm_path = os.path.join(base_dir, 'results', f'confusion_matrix_resnet18_run{run+1}.png')
+    os.makedirs(os.path.dirname(cm_path), exist_ok=True)
+    plt.tight_layout()
+    plt.savefig(cm_path)
+    plt.close()
+    print(f"Confusion matrix saved to: {cm_path}")
+    
+    # Visualize some prediction results
+    if viz_images:
+        n_samples = len(viz_images)
+        fig = plt.figure(figsize=(15, 3 * ((n_samples + 3) // 4)))
+        gs = gridspec.GridSpec(((n_samples + 3) // 4), 4)
+        
+        for i, (img, true_lbl, pred_lbl, img_path) in enumerate(zip(viz_images, viz_true, viz_pred, viz_paths)):
+            ax = plt.subplot(gs[i])
+            ax.imshow(img)
+            title_color = 'green' if true_lbl == pred_lbl else 'red'
+            ax.set_title(f"True: {true_lbl}\nPred: {pred_lbl}", color=title_color)
+            ax.axis('off')
+        
+        plt.tight_layout()
+        viz_path = os.path.join(base_dir, 'results', f'sample_predictions_resnet18_run{run+1}.png')
+        plt.savefig(viz_path)
+        plt.close()
+        print(f"Sample predictions visualization saved to: {viz_path}") 
