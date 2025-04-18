@@ -8,6 +8,7 @@ import seaborn as sns
 import numpy as np
 from sklearn.metrics import accuracy_score, confusion_matrix, precision_recall_curve, average_precision_score
 from efficientnet_pytorch import EfficientNet
+import pickle
 
 # Setup
 base_dir = '/Users/i/Downloads/COMP9444/Group Project/Datasets'
@@ -61,8 +62,25 @@ transform = transforms.Compose([
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
 ])
 
+# Noise/Background functions
+def add_gaussian_noise(image, mean=0, std=0.1):
+    """Add Gaussian noise to an image tensor."""
+    noise = torch.normal(mean=mean, std=std, size=image.shape)
+    noisy_image = image + noise
+    return torch.clamp(noisy_image, 0, 1)
+
+def add_random_background(image, background_dir):
+    """Add random background to an image."""
+    bg_files = [f for f in os.listdir(background_dir) if f.endswith(('.jpg', '.png'))]
+    if not bg_files:
+        return image
+    bg_path = os.path.join(background_dir, random.choice(bg_files))
+    bg = Image.open(bg_path).resize(image.size)
+    blended = Image.blend(bg, image, alpha=0.5)
+    return blended
+
 # Test function
-def test_model(model_name, fold, paths, labels, transform, device, categories):
+def test_model(model_name, fold, paths, labels, transform, device, categories, noise_type='none'):
     model_map = {
         'mobilenet_v2': models.mobilenet_v2,
         'resnet18': models.resnet18,
@@ -86,12 +104,28 @@ def test_model(model_name, fold, paths, labels, transform, device, categories):
         print(f"Error loading {model_path}: {e}")
         return None, None, None
     model = model.to(device).eval()
+    background_dir = os.path.join(base_dir, 'backgrounds')  # Folder for background images
     true, pred, probs = [], [], []
     for p, l in zip(paths, labels):
         try:
-            img = transform(Image.open(p).convert('RGB')).unsqueeze(0).to(device)
+            img = Image.open(p).convert('RGB')
+            # Apply noise or background based on noise_type (50% probability)
+            if random.random() < 0.5:
+                if noise_type == 'gaussian':
+                    # Add Gaussian noise after transform
+                    img_tensor = transform(img).unsqueeze(0).to(device)
+                    img_tensor = add_gaussian_noise(img_tensor, mean=0, std=0.1)
+                elif noise_type == 'background':
+                    # Add background before transform
+                    img = add_random_background(img, background_dir)
+                    img_tensor = transform(img).unsqueeze(0).to(device)
+                else:
+                    # No noise (default)
+                    img_tensor = transform(img).unsqueeze(0).to(device)
+            else:
+                img_tensor = transform(img).unsqueeze(0).to(device)
             with torch.no_grad():
-                output = model(img)
+                output = model(img_tensor)
                 prob = torch.softmax(output, dim=1).cpu().numpy()[0]
                 true.append(l)
                 pred.append(categories[torch.max(output, 1)[1]])
@@ -104,43 +138,40 @@ def test_model(model_name, fold, paths, labels, transform, device, categories):
 results = {}
 for model_name in models_info:
     fold = models_info[model_name]['fold']
-    print(f"Testing {model_name} Fold {fold}...")
-    true, pred, probs = test_model(model_name, fold, image_paths, labels, transform, device, categories)
+    noise_type = 'gaussian'  # Switch to 'background' or 'none'
+    print(f"Testing {model_name} Fold {fold} with {noise_type}...")
+    true, pred, probs = test_model(model_name, fold, image_paths, labels, transform, device, categories, noise_type=noise_type)
     if true is None or len(true) == 0:
         print(f"No results for {model_name} Fold {fold}.")
         continue
     acc = accuracy_score(true, pred) * 100
     cm = confusion_matrix(true, pred, labels=categories)
-    results[model_name] = {'fold': fold, 'accuracy': acc, 'cm': cm, 'true': true, 'pred': pred, 'probs': probs}
+    results[model_name] = {
+        'fold': fold,
+        'accuracy': acc,
+        'cm': cm,
+        'true': true,
+        'pred': pred,
+        'probs': probs,
+        'noise_type': noise_type
+    }
     print(f"{model_name} Fold {fold}: Accuracy {acc:.2f}%")
 
-# Plot function
-def plot_results(model_name, fold, cm, true, probs):
-    plt.figure(figsize=(18, 5))  # 横向排列宽图
+with open(os.path.join(base_dir, 'docs', 'results.pkl'), 'wb') as f:
+    pickle.dump(results, f)
 
+# Plot function
+def plot_results(model_name, fold, cm, true, probs, noise_type='none'):
+    plt.figure(figsize=(12, 5))
     # 1. Confusion Matrix
-    plt.subplot(1, 3, 1)
+    plt.subplot(1, 2, 1)
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
                 xticklabels=categories, yticklabels=categories, cbar=False)
     plt.title(f'{model_name} Fold {fold}\nConfusion Matrix')
     plt.xlabel('Predicted')
     plt.ylabel('True')
-
-    # 2. Loss Curve
-    plt.subplot(1, 3, 2)
-    train_loss = models_info[model_name]['train_loss']
-    val_loss = models_info[model_name]['val_loss']
-    epochs = range(1, len(train_loss) + 1)
-    plt.plot(epochs, train_loss, label='Train Loss', marker='o')
-    plt.plot(epochs, val_loss, label='Val Loss', marker='s')
-    plt.title('Loss Curve')
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.legend()
-    plt.grid(True)
-
-    # 3. Per-Class Accuracy
-    plt.subplot(1, 3, 3)
+    # 2. Per-Class Accuracy
+    plt.subplot(1, 2, 2)
     cm_diag = cm.diagonal()
     cm_sum = cm.sum(axis=1)
     acc = cm_diag / cm_sum * 100
@@ -152,12 +183,20 @@ def plot_results(model_name, fold, cm, true, probs):
     for i, v in enumerate(acc):
         plt.text(i, v + 2, f'{v:.1f}%', ha='center', va='bottom')
     plt.xticks(rotation=45)
-
-    # Save & close
+    # Save
     plt.tight_layout()
-    out_path = os.path.join(plot_dir, f'{model_name}_fold{fold}_summary_horizontal_plot.png')
+    out_path = os.path.join(plot_dir, f'{model_name}_{"noise" if noise_type != "none" else "no_noise"}.png')
     plt.savefig(out_path, bbox_inches='tight')
     plt.close()
+    # mAP
+    ap_scores = []
+    for i, cat in enumerate(categories):
+        true_binary = [1 if t == cat else 0 for t in true]
+        prob = [p[i] for p in probs]
+        ap = average_precision_score(true_binary, prob)
+        ap_scores.append(ap)
+    mAP = np.mean(ap_scores)
+    print(f"{model_name} Fold {fold} mAP: {mAP:.3f}")
 
 
 # Generate plots
@@ -167,5 +206,6 @@ for model_name in results:
     cm = result['cm']
     true = result['true']
     probs = result['probs']
+    noise_type = results[model_name].get('noise_type', 'none')  # Use stored noise_type or default
     print(f"Generating plot for {model_name} Fold {fold}...")
-    plot_results(model_name, fold, cm, true, probs)
+    plot_results(model_name, fold, cm, true, probs, noise_type=noise_type)
