@@ -5,6 +5,8 @@ from PIL import Image
 import os
 import argparse
 import random
+import csv
+import pickle
 from sklearn.model_selection import StratifiedShuffleSplit
 from collections import Counter
 
@@ -62,6 +64,10 @@ if len(image_paths) == 0:
     print("Error: No images found.")
     exit(1)
 
+# 创建输出目录
+output_dir = os.path.join(base_dir, "outputs")
+os.makedirs(output_dir, exist_ok=True)
+
 # 多轮测试
 for run in range(args.runs):
     print(f"\nRun {run + 1}/{args.runs}")
@@ -71,12 +77,12 @@ for run in range(args.runs):
         test_paths = [image_paths[i] for i in test_idx]
         test_labels = [labels[i] for i in test_idx]
 
-    # 测试
     correct = 0
     total = 0
     true_labels = []
     pred_labels = []
     errors = []
+    filenames = []
 
     for img_path, true_label in zip(test_paths, test_labels):
         if not os.path.exists(img_path):
@@ -93,6 +99,7 @@ for run in range(args.runs):
 
             true_labels.append(true_label)
             pred_labels.append(predicted_label)
+            filenames.append(os.path.basename(img_path))
             if predicted_label == true_label:
                 correct += 1
             else:
@@ -102,7 +109,6 @@ for run in range(args.runs):
             print(f"Error processing image {img_path}: {e}")
             continue
 
-    # 输出结果
     accuracy = 100 * correct / total if total > 0 else 0
     print(f"Run {run + 1} Accuracy: {accuracy:.2f}% ({correct}/{total})")
     print(f"True label distribution: {Counter(true_labels)}")
@@ -111,3 +117,19 @@ for run in range(args.runs):
         print("Errors:")
         for error in errors:
             print(error)
+
+    # 保存为 CSV
+    model_name = os.path.splitext(args.model)[0]
+    output_file = os.path.join(output_dir, f"{model_name}_run{run+1}.csv")
+    with open(output_file, 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(['filename', 'true_label', 'predicted_label'])
+        for fname, t, p in zip(filenames, true_labels, pred_labels):
+            writer.writerow([fname, t, p])
+    print(f"✅ Saved prediction log to {output_file}")
+
+    # 保存 y_true 和 y_pred 为 pkl
+    result_pkl = os.path.join(output_dir, f"{model_name}_run{run+1}_results.pkl")
+    with open(result_pkl, 'wb') as f:
+        pickle.dump({'y_true': true_labels, 'y_pred': pred_labels}, f)
+    print(f"✅ Saved raw result data to {result_pkl}")
