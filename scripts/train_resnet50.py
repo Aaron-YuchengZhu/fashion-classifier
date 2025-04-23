@@ -35,7 +35,7 @@ class FashionDataset(Dataset):
         label_id = self.label_map[label]
         return image, label_id
 
-# 数据预处理
+# Data preprocessing
 transform = transforms.Compose([
     transforms.RandomResizedCrop(224),
     transforms.RandomHorizontalFlip(),
@@ -45,7 +45,7 @@ transform = transforms.Compose([
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 
-# 加载所有图片
+# Load all images
 base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 data_dir = os.path.join(base_dir, 'data', 'ATT_augmented')
 categories = ['Accessories', 'Bags', 'Clothings', 'Shoes']
@@ -77,12 +77,12 @@ if len(image_paths) != len(labels):
     print(f"Error: image_paths ({len(image_paths)}) and labels ({len(labels)}) mismatch!")
     exit(1)
 
-# 五折交叉验证
+# Five-fold cross validation
 kf = KFold(n_splits=5, shuffle=True, random_state=42)
 device = torch.device('cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu')
 print(f"Using device: {device}")
 
-# 检查 KFold 索引
+# Check KFold indices
 print(f"Checking KFold indices...")
 for fold, (train_idx, val_idx) in enumerate(kf.split(image_paths)):
     print(f"Fold {fold + 1}: Train indices: {len(train_idx)}, Val indices: {len(val_idx)}")
@@ -94,12 +94,12 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(image_paths)):
         print(f"Error: Negative indices in Fold {fold + 1}!")
         exit(1)
 
-# 训练和验证
+# Training and validation
 fold_results = []
 for fold, (train_idx, val_idx) in enumerate(kf.split(image_paths)):
     print(f"\nFold {fold + 1}/5")
     print(f"Train indices: {len(train_idx)}, Val indices: {len(val_idx)}")
-    # 再次确认 labels 长度
+    # Again confirm labels length
     if len(labels) != len(image_paths):
         print(
             f"Error: labels length ({len(labels)}) != image_paths length ({len(image_paths)}) before Fold {fold + 1}!")
@@ -116,24 +116,24 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(image_paths)):
     train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
 
-    # 模型
+    # Model
     model = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
     num_ftrs = model.fc.in_features
     model.fc = nn.Linear(num_ftrs, 4)
     model = model.to(device)
 
-    # 损失和优化器
+    # Loss function and optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-3)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5)
 
-    # 保存路径
+    # Save path
     model_dir = os.path.join(base_dir, 'models')
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
     model_path = os.path.join(model_dir, f'resnet50_fold{fold + 1}.pth')
 
-    # 训练循环
+    # Training loop
     num_epochs = 20
     best_val_loss = float('inf')
     patience = 5
@@ -179,6 +179,6 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(image_paths)):
 
     fold_results.append(best_val_loss)
 
-# 输出平均结果
+# Output average results
 avg_val_loss = sum(fold_results) / len(fold_results)
 print(f"\nAverage Val Loss across 5 folds: {avg_val_loss:.4f}") 

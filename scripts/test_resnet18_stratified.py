@@ -21,7 +21,7 @@ parser.add_argument('--viz_samples', type=int, default=8, help='Number of sample
 args = parser.parse_args()
 
 # Load model
-device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu')
+device = torch.device('cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu')
 print(f"Using device: {device}")
 model = models.resnet18(weights=None)
 num_ftrs = model.fc.in_features
