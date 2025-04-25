@@ -1,41 +1,48 @@
 # Fashion Classifier
 
-This is a group project for COMP9444. We trained fashion classification models to classify items into four categories: `shoes`, `clothing`, `accessories`, and `bags`. The dataset has been cleaned and organized, and the latest models achieve high accuracy on the test set. This repository reflects the v2.0 state (April 2025).
+This is a group project for COMP9444 (25T1), developing a deep learning-based fashion image classifier for four categories: Accessories, Bags, Clothing, and Shoes. Using a balanced dataset of 8000 images, we trained and evaluated four CNN models (MobileNetV2, ResNet18, ResNet50, EfficientNet-B0), achieving up to 99.8% accuracy (no noise) and 93.0% (Gaussian noise, std=0.1). This repository reflects v3.0 (April 2025).
+
 
 ## Directory Structure
 
 ```bash
-Datasets
-├── ATT_augmented
-│   ├── Accessories
-│   ├── Bags
-│   ├── Clothings
-│   └── Shoes
-├── models
-│   ├── mobilenet_v2_fold1.pth
-│   ├── mobilenet_v2_fold2.pth
-│   ├── mobilenet_v2_fold3.pth
-│   ├── mobilenet_v2_fold4.pth
-│   ├── mobilenet_v2_fold5.pth
-│   ├── best_efficientnet.pth
-│   ├── best_mobilenet_v3.pth
-│   ├── best_resnet18.pth
-│   └── best_resnet50.pth
-├── notebooks
-│   └── fashion_classifier.ipynb
-└── scripts
-    ├── process_data.py
-    ├── test_efficientnet.py
-    ├── test_mobilenet_stratified.py
-    ├── test_resnet18.py
-    ├── test_resnet50.py
-    ├── train_efficientnet.py
-    ├── train_mobilenet_5fold.py
-    ├── train_resnet18.py
-    └── train_resnet50.py
+Datasets/
+├── ATT_augmented/
+│   ├── Accessories/ (2000 images)
+│   ├── Bags/ (2000 images)
+│   ├── Clothings/ (2000 images)
+│   ├── Shoes/ (2000 images)
+│   └── dataset_info.json
+├── data/
+│   ├── AAT/
+│   ├── LAT/
+│   ├── train.json
+│   ├── val.json
+│   └── test.json
+├── models/
+│   ├── mobilenet_v2_fold[1-5].pth
+│   ├── resnet18_fold[1-5].pth
+│   ├── resnet50_fold[1-5].pth
+│   ├── efficientnet_b0_fold[1-5].pth
+│   └── best_*.pth
+├── notebooks/
+│   └── fashion_classifier.ipynb
+├── plot/
+│   ├── mobilenet_v2_[no_noise|noise].png
+│   ├── resnet18_[no_noise|noise].png
+│   ├── resnet50_[no_noise|noise].png
+│   ├── efficientnet_b0_[no_noise|noise].png
+│   ├── comparison_*.png
+│   └── all_models_*.png
+├── scripts/
+│   ├── process_data.py
+│   ├── train_*.py
+│   ├── test_*.py
+│   ├── compare_models.py
+│   └── generate_comparison_plots.py
+└── docs/
+    └── results.pkl
 ```
-
-
 
 - `ATT_augmented/`: Dataset (8000 images)
 - `models/`: Trained weights (v3 + older)
@@ -50,14 +57,6 @@ Download:
 - [ATT_augmented.zip](https://1drv.ms/u/c/b82bee97bf2cbc97/EVEzFa9TF5ZDtEpNJ7KGjnUBjLmcYQPG8WqTiZ_DRLwhPw?e=Ys7Rtz)
 
 ## Models
-- **v3.0**:
-  - **MobileNetV2**: 99.6% accuracy (5-fold, `mobilenet_v2_fold1.pth` to `fold5.pth`), Avg Val Loss 0.0686.
-- **v2.0**:
-  - **ResNet50**: 98.0% accuracy, Val Loss 0.3151 (`best_resnet50.pth`).
-  - **EfficientNet-B0**: 88.0% accuracy, Val Loss 0.3243 (`best_efficientnet.pth`).
-  - **MobileNetV3**: 91.84% accuracy, Val Loss 0.2937 (`best_mobilenet_v3.pth`).
-- **v1.0**:
-  - **ResNet18**: 91.3% accuracy, Val Loss 0.3046 (`best_resnet18.pth`).
 
 Download:
 - [Models](https://1drv.ms/u/c/b82bee97bf2cbc97/ETXp2gUGHzxGgVYAU1QczBYBIyBL_Nzcpjr--Ljv4xF3uA)
@@ -71,64 +70,12 @@ Download:
 pip install torch==2.5.0 torchvision pillow scikit-learn
 ```
 
-## Usage
-
-1. Download and Extract: Get LAT.zip, AAT.zip, and best_mobilenet_v3.pth from the links above, extract datasets to data/.
-2. Process Data: Generate train/val/test.json:
-   ```bash
-   python scripts/process_data.py
-   ```
-
-3. **Train Models:**
-   - Train MobileNetV2 (saves to models/best_mobilenet_v3.pth):
-       ```bash
-       python scripts/train_mobilenet.py
-       ```
-   - Train ResNet18 (saves to models/best_resnet18.pth):
-     ```bash
-     python scripts/train_resnet18.py
-     ```
-     
-   - Train ResNet50 (saves to `models/best_resnet50.pth`):
-     ```bash
-     python scripts/train_resnet50.py
-     ```
-
-   - Train EfficientNet-B0 (saves to models/best_efficientnet.pth):
-     ```bash 
-     python scripts/train_efficientnet.py
-     ```
-     
-4. **Test Model:** 
-    - Test on test.json:
-    ```bash
-    # Test 50 random images from both LAT and AAT
-    python scripts/test_mobilenet.py --model models/best_mobilenet_v3.pth --source both --num_images 50
-    ```
-    - Test ResNet18:
-    ```bash
-    python scripts/test_resnet.py --model models/best_resnet18.pth --source both --num_images 50
-    ```
-   
-    - Test ResNet50:
-     ```bash
-     python scripts/test_resnet50.py --model models/best_resnet50.pth --source both --sample 50
-     ```
-
-    - Test EfficientNet-B0:
-     ```bash
-     python scripts/test_efficientnet.py --model models/best_efficientnet.pth --source both --num_images 50
-     ```
-
 ## Results
 
-- **MobileNetV2**: 99.6% accuracy (100/100, 5 runs), Avg Val Loss 0.0686 
-- **MobileNetV2**: Test Accuracy 91.84% (45/49), Val Loss 0.2937.
-- **ResNet18**: Test Accuracy 91.30% (42/46), Val Loss 0.3046.
-- **EfficientNet-B0**: Test Accuracy 88.00% (44/50), Val Loss 0.3243.
-- Older results:
-  - `best_mobilenet_v2.pth`: ~90% (45/50), Val Loss 0.3303.
-  - `best_fashion_classifier_v1.pth` (ResNet18): 100% on LAT (83/83), Val Loss 0.2709.
+- No Noise: All models near-perfect (98.8%-99.8%, mAP 1.000).
+- Gaussian Noise (std=0.1): EfficientNet-B0 leads (93.0%, mAP 0.990), ResNet50 weakest (89.0%).
+- Plots: Confusion matrices, PR curves, accuracy/mAP bars, heatmaps in plot/.
+- Notebook: fashion_classifier.ipynb details data processing, training, evaluation, and analysis.
 
 ## Changelog
 
